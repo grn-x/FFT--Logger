@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        tools:context=".ui.start.HomeFragment">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+             android:layout_height="0dp"
+            android:layout_gravity="fill_horizontal"
+            android:layout_weight="1"
+    >
+
+        <GridLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:columnCount="2"
+                android:rowCount="4"
+                app:layout_constraintBottom_toTopOf="@+id/start_button"
+                app:layout_constraintTop_toTopOf="parent"
+                android:padding="20dp">
+
+            <TextView
+                    android:text="Frequency in Hz: "
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tv_label_frequency"
+                    android:layout_row="0"
+                    android:layout_column="0"
+                    android:textSize="30sp" />
+
+            <TextView
+                    android:text=""
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tv_frequency"
+                    android:layout_row="0"
+                    android:layout_column="1"
+                    android:textSize="30sp" />
+
+            <TextView
+                    android:text="Calculations/s: "
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tv_label_performance"
+                    android:layout_row="1"
+                    android:layout_column="0"
+                    android:textSize="30sp" />
+
+            <TextView
+                    android:text=""
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tv_performance"
+                    android:layout_row="1"
+                    android:layout_column="1"
+                    android:textSize="30sp" />
+
+            <TextView
+                    android:text="Volume in dB: "
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tv_label_volume"
+                    android:layout_row="2"
+                    android:layout_column="0"
+                    android:textSize="30sp" />
+
+            <TextView
+                    android:text=""
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tv_volume"
+                    android:layout_row="2"
+                    android:layout_column="1"
+                    android:textSize="30sp" />
+
+            <TextView
+                    android:text="Amplitude: "
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tv_label_amplitude"
+                    android:layout_row="3"
+                    android:layout_column="0"
+                    android:textSize="30sp" />
+
+            <TextView
+                    android:text=""
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tv_amplitude"
+                    android:layout_row="3"
+                    android:layout_column="1"
+                    android:textSize="30sp" />
+        </GridLayout>
+
+        <Button
+                android:text="Start Logging"
+                android:visibility="visible"
+                android:id="@+id/start_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_row="0"
+                android:layout_column="0"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                android:layout_marginBottom="10dp"
+                />
+
+        <Button
+                android:text="Stop Logging"
+                android:visibility="gone"
+                android:id="@+id/stop_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:layout_marginBottom="10dp"/>
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_gravity="fill_horizontal"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+        <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:padding="10dp"
+                android:layout_margin="20dp"
+                android:background="@drawable/scrollview_border">
+
+            <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                    <TextView
+                            android:id="@+id/tvResultBox"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="start"
+                            android:scrollHorizontally="true"
+                            android:hint="The result will appear in here\nafter the logging session has been stopped" />
+                </HorizontalScrollView>
+            </ScrollView>
+        </FrameLayout>
+
+        <Button
+                android:id="@+id/copy_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="Copy to Clipboard" />
+    </LinearLayout>
+
+
+</LinearLayout>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:id="@+id/mobile_navigation"
+        app:startDestination="@+id/nav_home">
+
+    <fragment
+            android:id="@+id/nav_home"
+            android:name="de.grnx.fftlogger.ui.start.HomeFragment"
+            android:label="@string/menu_start"
+            tools:layout="@layout/fragment_start" />
+
+    <fragment
+            android:id="@+id/nav_gallery"
+            android:name="de.grnx.fftlogger.ui.charts.ChartsFragment"
+            android:label="@string/menu_charts"
+            tools:layout="@layout/fragment_charts" />
+
+    <fragment
+            android:id="@+id/nav_slideshow"
+            android:name="de.grnx.fftlogger.ui.results.ResultsFragment"
+            android:label="@string/menu_results"
+            tools:layout="@layout/fragment_results" />
+</navigation>

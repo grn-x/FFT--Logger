@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.media.AudioRecord;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
@@ -13,6 +14,7 @@ import androidx.core.content.ContextCompat;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.Queue;
 import java.util.concurrent.Executors;
@@ -20,6 +22,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import de.grnx.fftlogger.DTOs.FrequencyBoundsExchange;
 import de.grnx.fftlogger.DTOs.RecordRContainer;
 import de.grnx.fftlogger.fftcalc.AudioCalculator;
 
@@ -31,6 +34,7 @@ public class RecordScheduler {
 
     public Consumer<RecordRContainer> uiController;
     public Consumer<RecordRContainer> resWriter;
+    public Runnable callback;
 
     private final Handler uiHandler;
     private ScheduledExecutorService executorService;
@@ -41,17 +45,22 @@ public class RecordScheduler {
     private final AudioRecord recorder;
     private final Runnable executorRunnable;
 
+    private final FrequencyBoundsExchange fbe;
 
     private Deque<Integer> millisDuration = new ArrayDeque<>();
 
     /**
      * @param syncConsumer  Synchronous consumer that will be called with the result of the recording, made for non time intensive and critical operations such as pushing results to a collection
      * @param asyncConsumer Asynchronous consumer that will be called with the result of the recording, made for time intensive operations such as updating the ui
+     * @param Callback      the callback that will be called after the recording has been processed and the consumers have been called
      * @param context       the activity under which the permission check and request is performed
+     * @param fbe           the frequency bounds exchange object that will be used to filter the results
      */
-    public RecordScheduler(Consumer<RecordRContainer> syncConsumer, Consumer<RecordRContainer> asyncConsumer, Activity context) {
+    public RecordScheduler(Consumer<RecordRContainer> syncConsumer, Consumer<RecordRContainer> asyncConsumer, Runnable Callback , Activity context, FrequencyBoundsExchange fbe) {
+        this.fbe = fbe;
         this.resWriter = syncConsumer;
         this.uiController = asyncConsumer;
+        this.callback = Callback;
 
 
         uiHandler = new Handler(Looper.getMainLooper());
@@ -66,6 +75,10 @@ public class RecordScheduler {
         executorRunnable = new Runnable() {
             @Override
             public void run() {
+                /*while (MainActivity.concurrentRecorderLockWait.get()) { // do this to the resWriter instead, so that i have no downtime? and while blocking write to buffer arraylist that will be merged later? //TODO
+                    //burn thread cycles until the arraylist gets released
+                }
+                MainActivity.concurrentLogAccess.set(false);*/
                 long startTime = MainActivity.getCurrentTime();
 
                 byte[] buffer = new byte[minBufferSize];
@@ -83,9 +96,74 @@ public class RecordScheduler {
                 double decibel = audioCalculator.getDecibel();      // instead all of this buffer copying and calculating only takes about 1.5ms
                 double frequency = audioCalculator.getFrequency();  // this is okayish and amazing compared to the hardware recorder reading
 
+                //test
+                double[] frequencies = audioCalculator.getFrequencies();
+                int[] amplitudes = audioCalculator.getAmplitudes();
+                double[] decibels = audioCalculator.getDecibels();
+
+               /*
+                //i feel horrible for doing it this way but i currently cant see a better option
+                if(fbe.getLow()<0&&fbe.getHigh()<0){
+                    //do nothing
+
+                }else if(fbe.getLow()<0){
+
+
+                }else if(fbe.getHigh()<0){
+
+
+                }
+
+
+                if(fbe.getHigh()>MainActivity.sampleRate/2){//this is the nyquist frequency // deal with it? this is a TODO for later
+                //for now compiler optimize this out please and thank you
+                }*/
+
+                //why dont i just let the lower bound be negative but set the higher bound to the nyquist frequency since this should be the maximum frequency that can be recorded anyway
+
+                int i = 0;
+                while((frequencies[i] >fbe.getLow()||frequencies[i] < fbe.getHigh())&&i<frequencies.length-1){
+                    if(frequencies[i] >fbe.getLow()){
+                        //System.out.println("too high: " + frequencies[i] + " > " + fbe.getLow());
+                    }
+                    if(frequencies[i] < fbe.getHigh()){
+                        //System.out.println("too low: " + frequencies[i] + " < " + fbe.getHigh() + "\t" + fbe.getLow());
+                    }
+                    i++;
+
+                }
+                //System.out.println("new run \n\n");
+               /* //low pass filter/if higher increment
+                if(frequencies[i] >fbe.getLow()){
+                    i++;
+                }
+
+                //high pass filter/ if lower increment
+                if(frequencies[i] >fbe.getHigh()){
+                    fbe.setHigh(-1);
+                }
+
+
+                while(frequencies[i] < fbe.getLow() || frequencies[i] > (fbe.getHigh()<0?MainActivity.sampleRate/2:fbe.getHigh()) && i < frequencies.length-1){//i am so sorry about the ternary operator getting executed each loop iteration and multiple times a second. this is just the beta version so ill call it fine
+                    i++;
+                }*/
+
+
+                amplitude = amplitudes[i];
+                decibel = decibels[i];
+                frequency = frequencies[i];
+
+               /* System.out.println("Arrays.toString(frequencies) = " + Arrays.toString(frequencies));
+                System.out.println("Arrays.toString(amplitudes) = " + Arrays.toString(amplitudes));
+                System.out.println("Arrays.toString(decibels) = " + Arrays.toString(decibels));
+
+                System.out.println("amplitude = " + amplitude);
+                System.out.println("decibel = " + decibel);
+                System.out.println("frequency = " + frequency);*/
+
                 //long sysTimeCall = MainActivity.getCurrentTime(); //this should get moved before the reading is done since the reading is the most expensive operation
 
-                RecordRContainer result = new RecordRContainer(frequency, amplitude, decibel, sysTimeCall, sysTimeCall - MainActivity.getStartTime(), System.currentTimeMillis() - startTime);
+                RecordRContainer result = new RecordRContainer(frequencies,  amplitudes, decibels,frequency, amplitude, decibel, sysTimeCall, sysTimeCall - MainActivity.getStartTime(), System.currentTimeMillis() - startTime);
                 resWriter.accept(result);
 
                 uiHandler.post(new Runnable() {
@@ -96,10 +174,15 @@ public class RecordScheduler {
                     }
                 });
                 //millisDuration.add((int)(System.currentTimeMillis()-startTime));
+                //MainActivity.concurrentLogAccess.set(true);
+                callback.run(); // just noticed i dont need any locks since the callback will block the executor service cycle anyways :D
             }
         };
     }
 
+    public FrequencyBoundsExchange getFrequencyBoundsExchange(){
+        return this.fbe;
+    }
 
     /**
      * this method starts the recording, calculation and ui updating
@@ -122,11 +205,17 @@ public class RecordScheduler {
      * this method stops the recording, calculation and ui updating
      */
     public void stop() {
-        executorService.shutdown();
-        executorService = null;//gc
+        try {
+            executorService.shutdown();
+            executorService = null;//gc
+            if (recorder.getState() != AudioRecord.STATE_INITIALIZED) return;
+            recorder.stop();
+        }catch (Exception e){
+            System.out.println("e = " + e);
+            //fuck something crashed, id guess its a null pointer exception. i dont wanna have the logged data get wiped because something as stupid as this so here is this:
+        }
 
-        if (recorder.getState() != AudioRecord.STATE_INITIALIZED) return;
-        recorder.stop();
+
     }
 
     /**
@@ -139,7 +228,7 @@ public class RecordScheduler {
     }
 
     @Deprecated
-/**i commented the timer out to avoid unnecessary overhead, this method is not needed anymore */
+/**i commented the timer out to avoid unnecessary overhead, this method is not needed anymore Edit 2; wtf does that even mean? its still in the code, i suggest removing the deprecated tag, though im not sure what any of this means anymore since i took a long break from developing*/
     public void startTimer() {
         millisDuration.clear();
     }

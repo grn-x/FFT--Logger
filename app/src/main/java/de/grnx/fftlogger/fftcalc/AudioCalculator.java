@@ -76,12 +76,26 @@ public class AudioCalculator {
     private double retrieveFrequency() {
         int length = bytes.length / 2;
         int sampleSize = 8192;
-        while (sampleSize > length) sampleSize = sampleSize >> 1;
+        while (sampleSize > length) sampleSize = sampleSize >> 1;//divide by two until sampleSize is smaller than length and a power of 2
 
         FrequencyCalculator frequencyCalculator = new FrequencyCalculator(sampleSize);
         frequencyCalculator.feedData(bytes, length);
 
         return resizeNumber(frequencyCalculator.getFreq());
+    }
+
+    public double[] getFrequencies() {
+        return retrieveFrequencyDomain();
+    }
+    private double[] retrieveFrequencyDomain(){
+        int length = bytes.length / 2;
+        int sampleSize = 8192;
+        while (sampleSize > length) sampleSize = sampleSize >> 1;//divide by two until sampleSize is smaller than length and a power of 2
+
+        FrequencyCalculator frequencyCalculator = new FrequencyCalculator(sampleSize);
+        frequencyCalculator.feedData(bytes, length);
+
+        return frequencyCalculator.getFreqDomain_map().values().stream().mapToDouble(Double::doubleValue).toArray();
     }
 
     private double getRealDecibel(int amplitude) {

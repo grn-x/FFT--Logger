@@ -1,6 +1,9 @@
 package de.grnx.fftlogger.fftcalc;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class FrequencyCalculator {
 
@@ -134,4 +137,43 @@ public class FrequencyCalculator {
         }
         return maxAmpFreq;
     }
+
+
+    public Map<Double, Double> getFreqDomain_map() {
+        if (nAnalysed != 0) {
+            int outLen = spectrumAmpOut.length;
+            double[] sAOC = spectrumAmpOutCum;
+            for (int j = 0; j < outLen; j++) {
+                sAOC[j] /= nAnalysed;
+            }
+            System.arraycopy(sAOC, 0, spectrumAmpOut, 0, outLen);
+            Arrays.fill(sAOC, 0.0);
+            nAnalysed = 0;
+            for (int i = 0; i < outLen; i++) {
+                spectrumAmpOutDB[i] = 10.0 * Math.log10(spectrumAmpOut[i]);
+            }
+        }
+
+        int sampleRate = 44100;
+        Map<Double, Double> freqAmpMap = new TreeMap<>(Collections.reverseOrder());
+        for (int i = 1; i < spectrumAmpOutDB.length - 1; i++) {
+            double freq = (double) (i * sampleRate) / fftLen;
+            if ((double) sampleRate / fftLen < freq && freq < (double) sampleRate / 2 - (double) sampleRate / fftLen) {
+                double x1 = spectrumAmpOutDB[i - 1];
+                double x2 = spectrumAmpOutDB[i];
+                double x3 = spectrumAmpOutDB[i + 1];
+                double a = (x3 + x1) / 2 - x2;
+                double b = (x3 - x1) / 2;
+                if (a < 0) {
+                    double xPeak = -b / (2 * a);
+                    if (Math.abs(xPeak) < 1) {
+                        freq += xPeak * sampleRate / fftLen;
+                    }
+                }
+            }
+            freqAmpMap.put(spectrumAmpOutDB[i], freq);
+        }
+        return freqAmpMap;
+    }
+
 }

@@ -5,17 +5,54 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import de.grnx.fftlogger.DTOs.RecordRContainer;
+import de.grnx.fftlogger.MainActivity;
 
 public class HomeViewModel extends ViewModel {
 
-    private final MutableLiveData<String> frequency = new MutableLiveData<>();
-    private final MutableLiveData<String> volume = new MutableLiveData<>();
-    private final MutableLiveData<String> amplitude = new MutableLiveData<>();
-    private final MutableLiveData<String> performance = new MutableLiveData<>();
 
     private final MutableLiveData<Boolean> isLogging = new MutableLiveData<>();
 
     private final MutableLiveData<String> resultBox = new MutableLiveData<>();
+    private final MutableLiveData<RecordRContainer> currentData = new MutableLiveData<>();
+
+    private final MutableLiveData<Double> highPassFilter = new MutableLiveData<>();
+    private final MutableLiveData<Double> lowPassFilter = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> tvEnabled = new MutableLiveData<>(); //essentially the same as isLogging, but for the textview and not managed in the main activity but in the fragment via button clicks
+
+
+
+    public void setCurrentData(RecordRContainer data){
+        currentData.setValue(data);
+    }
+
+    public RecordRContainer getCurrentData(){
+        return currentData.getValue();
+    }
+
+    public MutableLiveData<RecordRContainer> getCurrentDataRef(){
+        return currentData;
+    }
+
+
+    public double getHighPassFilter() {
+        return highPassFilter != null && highPassFilter.getValue() != null ? highPassFilter.getValue() : 0;
+    }
+
+    public void setHighPassFilter(double value) {
+        highPassFilter.setValue(value);
+    }
+
+    public double getLowPassFilter() {
+        return lowPassFilter != null && lowPassFilter.getValue() != null ? lowPassFilter.getValue() : MainActivity.sampleRate / 2; //nyquist frequency if not initialized
+    }
+    public void setLowPassFilter(double value) {
+        lowPassFilter.setValue(value);
+    }
+
+
+    public double[] getFrequencyDomain() {
+        return currentData.getValue().frequencies();
+    }
 
     public void setLogging(boolean value) {
         isLogging.setValue(value);
@@ -25,40 +62,29 @@ public class HomeViewModel extends ViewModel {
         return isLogging;
     }
 
-    public void setFrequency(RecordRContainer value) {
-        frequency.setValue(value.frequency()+" Hz");
+
+    public String getFrequency() {
+        //round using casts because this should be hotspot optimized and faster than other methods
+        int i = (int)(currentData.getValue().frequency()*10);
+        return ((double)i)/10+" Hz";
+        //return currentData.getValue().frequency()+" Hz";
     }
 
-    public LiveData<String> getFrequency() {
-        return frequency;
+
+    public String getVolume() {
+        return currentData.getValue().volume()+ " dB";
     }
 
-    public void setVolume(RecordRContainer value) {
-        volume.setValue(value.volume()+ " dB");
+
+    public String getAmplitude() {
+        return currentData.getValue().amplitude()+"";
     }
 
-    public LiveData<String> getVolume() {
-        return volume;
-    }
 
-    public void setAmplitude(RecordRContainer value) {
-        amplitude.setValue(value.amplitude()+ "");
-    }
 
-    public LiveData<String> getAmplitude() {
-        return amplitude;
-    }
-
-    public void setPerformance(RecordRContainer value) {
-        //performance.setValue((1 / ((value.operationTime() + 1)*0.001))+ ""); //+1 to avoid division by zero
-        double d = (1 / ((value.operationTime() + 1)*0.001));
-//        int i =(int)(d*1000);
-//        float f = (float)i/1000;//round to 3 decimal places, casting is more efficient than using Math.round or decimal format because its hotspot optimized
-        performance.setValue((int)d + "");
-    }
-
-    public LiveData<String> getPerformance() {
-        return performance;
+    public String getPerformance() {
+        double d = (1 / ((currentData.getValue().operationTime() + 1)*0.001));
+        return (int)d + "";
     }
 
     public void setResultBox(String value) {
@@ -66,5 +92,18 @@ public class HomeViewModel extends ViewModel {
     }
     public LiveData<String> getResultBox() {
         return resultBox;
+    }
+
+    public void enableTV() {
+        tvEnabled.setValue(true);
+    }
+    public void disableTV() {
+        tvEnabled.setValue(false);
+    }
+    public LiveData<Boolean> getTVEnabled() {
+        return tvEnabled;
+    }
+    public boolean isTVEnabled() {
+        return tvEnabled.getValue() != null ? tvEnabled.getValue():true;
     }
 }

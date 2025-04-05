@@ -22,4 +22,14 @@
             android:fitsSystemWindows="true"
             app:headerLayout="@layout/nav_header_main"
             app:menu="@menu/activity_main_drawer" />
+
+
+   <!-- <androidx.viewpager2.widget.ViewPager2
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+        android:id="@+id/viewpager"
+
+            >
+    </androidx.viewpager2.widget.ViewPager2>-->
+
 </androidx.drawerlayout.widget.DrawerLayout>

@@ -12,4 +12,5 @@ private RequestEnum(int reqCode) {
 
 public final class RequestCodes {
     public static final int AUDIO = 69;
+    public static final int STORAGE = 420;
 }

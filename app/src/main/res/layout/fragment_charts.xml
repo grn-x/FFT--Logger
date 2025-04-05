@@ -4,13 +4,13 @@
         xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:rowCount="2"
+        android:rowCount="3"
         tools:context=".ui.charts.ChartsFragment">
 
     <com.github.mikephil.charting.charts.LineChart
             android:id="@+id/chart1"
             android:layout_width="match_parent"
-            android:layout_rowWeight="1"
+            android:layout_rowWeight="2"
             android:layout_margin="4dp"
             android:layout_column="0"
             android:layout_row="0"/>
@@ -18,10 +18,227 @@
     <com.github.mikephil.charting.charts.LineChart
             android:id="@+id/chart2"
             android:layout_width="match_parent"
-            android:layout_rowWeight="1"
+            android:layout_rowWeight="2"
             android:layout_margin="4dp"
             android:layout_column="0"
             android:layout_row="1"/>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:src="@drawable/ic_fab_info"
+            android:layout_margin="10dp"
+            android:layout_column="0"
+            android:layout_row="2"
+
+            />
+
+    <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="3"
+            android:rowCount="3"
+            android:layout_rowWeight="0.1"
+            android:layout_row="2"
+            android:layout_column="0">
+        <com.google.android.material.button.MaterialButton
+                android:id="@+id/button"
+                android:layout_columnWeight="0.1"
+                android:textSize="11sp"
+                android:scaleX="0.9"
+                android:scaleY="0.9"
+                android:layout_gravity="center|fill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Point 1"/>
+        <com.google.android.material.button.MaterialButton
+                android:id="@+id/button2"
+                android:layout_columnWeight="0.1"
+                android:textSize="11sp"
+                android:scaleX="0.9"
+                android:scaleY="0.9"
+                android:layout_gravity="center|fill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Point 2"/>
+
+        <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/original_frequency"
+                android:layout_row="0"
+                android:layout_column="2"
+                android:layout_columnWeight="10"
+                android:layout_gravity="center|fill"
+                android:layout_margin="10dp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:hint="Emitted Frequency"
+                app:hintEnabled="true"
+                app:expandedHintEnabled="true">
+
+            <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/tv_original_frequency"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:singleLine="true"
+                    />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <RelativeLayout
+                android:id="@+id/p1_freq"
+                android:layout_row="1"
+                android:layout_column="0"
+                android:layout_gravity="center|fill"
+                android:layout_margin="10dp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content">
+            <TextView
+                    android:id="@+id/label1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Frequency"/>
+
+            <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/label1"
+                    android:id="@+id/tv_freq1"
+                    android:scaleX="1"
+                    android:scaleY="1"
+                    android:text=""/>
+
+        </RelativeLayout>
+
+        <RelativeLayout
+                android:id="@+id/p2_freq"
+                android:layout_row="1"
+                android:layout_column="1"
+                android:layout_gravity="center|fill"
+                android:layout_margin="10dp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content">
+            <TextView
+                    android:id="@+id/label2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Frequency"/>
+
+            <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/label2"
+                    android:id="@+id/tv_freq2"
+                    android:scaleX="1"
+                    android:scaleY="1"
+                    android:text=""/>
+
+        </RelativeLayout>
+
+        <RelativeLayout
+                android:id="@+id/s1_freq"
+                android:layout_row="2"
+                android:layout_column="0"
+                android:layout_gravity="center|fill"
+                android:layout_margin="10dp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content">
+            <TextView
+                    android:id="@+id/label3"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Start Time"/>
+
+            <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/label3"
+                    android:id="@+id/tv_time1"
+                    android:scaleX="1"
+                    android:scaleY="1"
+                    android:text=""/>
+
+        </RelativeLayout>
+
+        <RelativeLayout
+                android:id="@+id/s2_freq"
+                android:layout_row="2"
+                android:layout_column="1"
+                android:layout_gravity="center|fill"
+                android:layout_margin="10dp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content">
+            <TextView
+                    android:id="@+id/label4"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="End Time"/>
+
+            <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/label4"
+                    android:id="@+id/tv_time2"
+                    android:scaleX="1"
+                    android:scaleY="1"
+                    android:text=""/>
+
+        </RelativeLayout>
+
+
+
+        <RelativeLayout
+                android:id="@+id/s3_freq"
+                android:layout_row="1"
+                android:layout_column="2"
+                android:layout_gravity="center|fill"
+                android:layout_margin="10dp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content">
+            <TextView
+                    android:id="@+id/label5"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Approaching Speed"/>
+
+            <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/label5"
+                    android:scaleX="1.3"
+                    android:scaleY="1.3"
+                    android:text=""/>
+
+        </RelativeLayout>
+
+        <RelativeLayout
+                android:id="@+id/s4_freq"
+                android:layout_row="2"
+                android:layout_column="2"
+                android:layout_gravity="center|fill"
+                android:layout_margin="10dp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content">
+            <TextView
+                    android:id="@+id/label6"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Leaving Speed"/>
+
+            <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/label6"
+                    android:scaleX="1.3"
+                    android:scaleY="1.3"
+                    android:text=""/>
+
+        </RelativeLayout>
+
+
+
+    </GridLayout>
 
 
 

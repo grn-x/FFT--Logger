@@ -1,13 +1,29 @@
 package de.grnx.fftlogger;
 
+import static java.security.AccessController.getContext;
+
+import android.Manifest;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.content.res.Configuration;
+import android.graphics.Rect;
 import android.media.AudioFormat;
 import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
+import android.widget.TextView;
 
 import com.google.android.material.navigation.NavigationView;
+import com.google.android.material.snackbar.Snackbar;
 
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.FragmentPagerAdapter;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
@@ -15,18 +31,33 @@ import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.viewpager2.widget.ViewPager2;
 
 import de.grnx.fftlogger.DTOs.DequeWrapper;
+import de.grnx.fftlogger.DTOs.FrequencyBoundsExchange;
 import de.grnx.fftlogger.DTOs.RecordRContainer;
+import de.grnx.fftlogger.FileHandling.FileCopyPermissionCallback;
+import de.grnx.fftlogger.FileHandling.FileUtils;
 import de.grnx.fftlogger.databinding.ActivityMainBinding;
 import de.grnx.fftlogger.ui.charts.ChartsViewModel;
 import de.grnx.fftlogger.ui.charts.ChartsFragment;
+import de.grnx.fftlogger.ui.results.ResultsFragment;
+import de.grnx.fftlogger.ui.start.HomeFragment;
 import de.grnx.fftlogger.ui.start.HomeViewModel;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements FileCopyPermissionCallback {
 
     private final ArrayList<ArrayDeque<RecordRContainer>> resultList = new ArrayList<>();
     private ArrayDeque<RecordRContainer> currentCollectionRef;//initialized and put in resultList in start logging, ref overwritten in next startlogging method execution(though still accessible through resultList)
@@ -65,10 +96,31 @@ public class MainActivity extends AppCompatActivity {
      */
     public static final boolean useFixedDelayScheduler = false;
 
+    public static FrequencyBoundsExchange passFilters = new FrequencyBoundsExchange(0,0);
 
+
+    public static double initialLowPassFilter; //filters that get read and applied only at the start of the logging process, so that changes afterwards have no effect on the current logging process // maybe also block inputs when logging is active??
+    public static double initialHighPassFilter;
 
     public static int execHandlerCounter = 0;
     public static int execSyncCounter = 0;
+
+    public static final AtomicBoolean concurrentLogAccess = new AtomicBoolean(false); //this is to prevent saving the log file while the scheduler is still writing to it. the scheduler will change this value twice every cycle, so it should be safe to use this as a lock
+    public static final AtomicBoolean concurrentRecorderLockWait = new AtomicBoolean(false); //this will be set inside the main Thread, when the concurrentLogAccess is set to true and the Main Activity wants to save the log data. this will be checked in the scheduler to wait for the main thread to finish saving the log data before continuing to write to the log file
+//both of these could be volatile only since only one part is writing
+
+    public static final int saveAfterCycles = 500; //this is the amount of cycles the scheduler will go through before saving the log data to the file. this is to prevent the file from being written to too often or not at all until save which would crash the jvm because of filled memory
+
+    public static final float speedOfSound = 340f;
+
+    public static File currentLogFile = null;
+
+    private File fileToCopy;
+    private String newFileName;
+
+    private ViewPager2 fragmentMgr;
+
+    public static int colorMode; //0 = light, 1 = dark, 2 = system default
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,6 +151,29 @@ public class MainActivity extends AppCompatActivity {
         sharedViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
         chartsViewModel = new ViewModelProvider(this).get(ChartsViewModel.class);
 
+       /* fragmentMgr = findViewById(R.id.viewpager);
+        VPAdapter vpAdapter = new VPAdapter(getSupportFragmentManager(), FragmentPagerAdapter.BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
+        vpAdapter.addFragment(new HomeFragment());
+        vpAdapter.addFragment(new ChartsFragment());
+        vpAdapter.addFragment(new ResultsFragment());*/
+
+
+        int nightModeFlags = getResources().getConfiguration().uiMode &
+                        Configuration.UI_MODE_NIGHT_MASK;
+        switch (nightModeFlags) {
+            case Configuration.UI_MODE_NIGHT_YES:
+                colorMode = 1;
+                break;
+
+            case Configuration.UI_MODE_NIGHT_NO:
+                colorMode = 0;
+                break;
+
+            case Configuration.UI_MODE_NIGHT_UNDEFINED:
+//                colorMode = -1;
+                colorMode=1;
+                break;
+        }
 
     }
 
@@ -124,7 +199,7 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
 
 
-        recordScheduler = new RecordScheduler(this::writeLogData ,this::updateUIWithLogData, this);
+        recordScheduler = new RecordScheduler(this::writeLogData ,this::updateUIWithLogData,  this::callBack,this, passFilters);
         recordScheduler.start();
     }
 
@@ -133,6 +208,7 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         recordScheduler.stop();
     }
+
 
     public void startLogging() {
         recordScheduler.startTimer();
@@ -150,7 +226,26 @@ public class MainActivity extends AppCompatActivity {
             chartsViewModel.resetState(); //calling this just to make sure. this should be handled inside the resetGraph method already. actually this is not needed since the critical data is logged inside the synchronous callback and not dependent on the ui or the graph
         }
 
+        initialHighPassFilter = sharedViewModel.getHighPassFilter();
+        initialLowPassFilter = sharedViewModel.getLowPassFilter();
+        passFilters.setHigh(initialHighPassFilter);
+        passFilters.setLow(initialLowPassFilter);
+
         startTime = System.currentTimeMillis();
+        String str;
+        if(initialHighPassFilter<=0 && initialLowPassFilter <= 0){
+            str = "Session started. The loudest frequency will appear here and in the graphs unfiltered";
+        }else if(initialHighPassFilter<=0){
+            str = "Session started. The loudest frequency up to " + initialLowPassFilter + " Hz will appear here and in the graphs";
+        }else if(initialLowPassFilter <= 0){
+            str = "Session started. The loudest frequency higher than " + initialHighPassFilter + " Hz will appear here and in the graphs";
+        }else if(initialHighPassFilter>0&&initialLowPassFilter>0){
+            str = "Session started. The loudest frequency between " + initialHighPassFilter+ " and " + initialLowPassFilter + " Hz will appear here and in the graphs";
+        }else{
+            str = "Session started. Error (the filters are probably set correctly but I messed up the ui logic)";
+        }
+
+        dismissableSnackbar(str, "Ok", 10000);
     }
 
     public void stopLogging() {
@@ -170,12 +265,91 @@ public class MainActivity extends AppCompatActivity {
         execHandlerCounter = execSyncCounter = 0;
         isLogging = false;
         sharedViewModel.setLogging(false);
-        sharedViewModel.setResultBox(dequeToString(currentCollectionRef));
+
+        //sharedViewModel.setResultBox(dequeToString(currentCollectionRef));
+        saveLogSession();
+        currentLogFile = null;
 //        chartsViewModel.setFrequency(new RecordRContainer(0, 0,0, 0L,0L));
 //        chartsViewModel.setVolume(new RecordRContainer(0, 0,0,0L,0L));
 //        chartsViewModel.setAmplitude(new RecordRContainer(0, 0,0,0L,0L));
         //chartsViewModel.setLatestCalc(new RecordRContainer(0, 0,0,0L,0L));//is this needed? //TODO
         startTime =-1;
+        passFilters.setHigh(-1d);
+        passFilters.setLow(-1d);
+    }
+
+
+    int callbackCounter = 0;
+        public void callBack(){
+            if(!isLogging) return;
+            if(callbackCounter++ > 100){
+                System.out.println("callbackCounter = " + callbackCounter);
+                callbackCounter = 0;
+                saveLogPart();
+            }
+        }
+    private void saveLogSession_dpr(){
+        File subDir = checkSubDir();
+        //get current date--time
+        String timeStamp = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss").format(Calendar.getInstance().getTime());
+
+        String[] headers = new String[]{ "Logging session finished at: " + timeStamp.replace("_", " "),
+        ("HighPassFilter: " + initialHighPassFilter + "\t LowPassFilter: " + initialLowPassFilter + " (-1/0 will be default and values below 1 ignored)"),
+        ("elapsedTime; systemTime; operationTime; frequency; amplitude; decibel")};
+
+
+        File outFile = new File(subDir, String.format("%s.txt", timeStamp));
+        try {
+            PrintWriter out = new PrintWriter(new FileOutputStream(outFile, true));
+            out.print(dequeToString(currentCollectionRef, headers));
+            out.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        System.out.println(outFile.exists());
+    }
+
+    public void saveLogSession(){
+        saveLogPart();
+        String name = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss").format(Calendar.getInstance().getTime()).concat(".txt");
+        currentLogFile.renameTo(new File(checkSubDir(), name));
+
+    }
+
+    private void saveLogPart() {
+        System.out.println("saved: ");
+        //System.out.println("currentCollectionRef.size() = " + currentCollectionRef.size());
+
+        String[] headers = null;
+        if(currentLogFile == null){
+            File subDir = checkSubDir();
+            //get current date--time
+            String timeStamp = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss").format(Calendar.getInstance().getTime());
+            headers = new String[]{ "Logging session started at: " + timeStamp.replace("_", " "),
+                    ("HighPassFilter: " + initialHighPassFilter + "\t LowPassFilter: " + initialLowPassFilter + " (-1/0 will be default and values below 1 ignored)"),
+                    ("elapsedTime; systemTime; operationTime; frequency; amplitude; decibel; 30 loudest frequencies (unfiltered)")};
+            currentLogFile = new File(subDir, String.format("%s.raw", timeStamp));
+        }
+
+        try {
+            PrintWriter out = new PrintWriter(new FileOutputStream(currentLogFile, true));
+            out.print(dequeToString(currentCollectionRef, headers));
+            currentCollectionRef.clear();
+            out.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private File checkSubDir(){
+        File path = this.getFilesDir();
+        File subDir = new File(path, "logData");
+
+        if (!subDir.exists()) {
+            subDir.mkdirs();
+        }
+        return subDir;
     }
 
     public static long getElapsedTime() {
@@ -195,10 +369,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateUIWithLogData(RecordRContainer data) {
-        sharedViewModel.setFrequency(data);
-        sharedViewModel.setVolume(data);
-        sharedViewModel.setAmplitude(data);
-        sharedViewModel.setPerformance(data);
+//        sharedViewModel.setFrequency(data);
+//        sharedViewModel.setVolume(data);
+//        sharedViewModel.setAmplitude(data);
+//        sharedViewModel.setPerformance(data);
+            sharedViewModel.setCurrentData(data);
+
 
         if(isLogging){
             chartsViewModel.setLatestCalc(data);
@@ -213,6 +389,11 @@ public class MainActivity extends AppCompatActivity {
 
         }
     }
+    private void updateUIGraphWithLogData(RecordRContainer data) {
+        if(isLogging){
+            chartsViewModel.setLatestCalc(data);
+        }
+    }
 
     private void writeLogData(RecordRContainer data) {
         if(isLogging) {
@@ -222,9 +403,14 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
     }
-    private String dequeToString(ArrayDeque<RecordRContainer> deque) {
+    private String dequeToString(ArrayDeque<RecordRContainer> deque, String... headers) {
         StringBuilder sb = new StringBuilder();
-        sb.append("elapsedTime; systemTime; operationTime; frequency; amplitude; decibel\n");
+        if (headers != null && headers.length >0){//why is this check unnecessary? is an array of length 0 always automatically null?
+            for (String header : headers) {
+                sb.append(header);
+                sb.append("\n");
+            }
+    }
         for(RecordRContainer r : deque) {
             sb.append(r.toString());
             sb.append("\n");
@@ -244,6 +430,53 @@ public class MainActivity extends AppCompatActivity {
         recordScheduler = null;//gc
     }
 
+    //clear focus on touch outside of edit text; source: https://stackoverflow.com/questions/4165414/how-to-hide-soft-keyboard-on-android-after-clicking-outside-edittext and https://stackoverflow.com/questions/4828636/edittext-clear-focus-on-touch-outside
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            View v = getCurrentFocus();
+            if ( v instanceof EditText) {
+                Rect outRect = new Rect();
+                v.getGlobalVisibleRect(outRect);
+                if (!outRect.contains((int)event.getRawX(), (int)event.getRawY())) {
+                    v.clearFocus();
+                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+                }
+            }
+        }
+        return super.dispatchTouchEvent( event );
+    }
+public void dismissableSnackbar(String message, String actionMessage, int duration){
+    final Snackbar snackBar = Snackbar.make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG);
 
+    snackBar.setAction(actionMessage, new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            // Call your action method here
+            snackBar.dismiss();
+        }
+    });
+snackBar.setTextMaxLines(10);
+snackBar.setDuration(duration);
+    snackBar.show();
+}
+    @Override
+    public void requestFileCopyPermission(File file, String newFileName) {
+        this.fileToCopy = file;
+        this.newFileName = newFileName;
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, RequestCodes.STORAGE);
+    }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == RequestCodes.STORAGE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                FileUtils.copyFileToDownloads(this, fileToCopy, newFileName);
+            } else {
+                // Handle permission denial
+            }
+        }
+    }
 }

@@ -1,0 +1,3 @@
+<resources>
+    <attr name="textColorPrimary" format="reference|color" />
+</resources>

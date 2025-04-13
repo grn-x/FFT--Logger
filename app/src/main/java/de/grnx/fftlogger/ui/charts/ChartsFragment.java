@@ -1,11 +1,13 @@
 package de.grnx.fftlogger.ui.charts;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -71,7 +73,8 @@ public class ChartsFragment extends Fragment {
         MainActivity.chartsFragmentRef = this;
         sharedViewModel = new ViewModelProvider(requireActivity()).get(ChartsViewModel.class);
 
-        graphLabelColor = Color.WHITE;
+        graphLabelColor = getThemeColor(requireContext(), R.attr.textColorPrimary);;
+    //Color.WHITE;
         if(MainActivity.colorMode == 0) graphLabelColor = Color.BLACK;
 
 
@@ -718,7 +721,13 @@ private void addEntry(LineChart chart, Entry entry) {
 
     }
 
-
+    /* util class candidate */
+    private static int getThemeColor(Context context, int attr) {
+        TypedValue typedValue = new TypedValue();
+        Resources.Theme theme = context.getTheme();
+        theme.resolveAttribute(attr, typedValue, true);
+        return typedValue.data;
+    }
 
 
     /**@deprecated */

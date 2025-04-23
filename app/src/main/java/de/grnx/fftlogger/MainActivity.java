@@ -120,7 +120,10 @@ public class MainActivity extends AppCompatActivity implements FileCopyPermissio
 
     private ViewPager2 fragmentMgr;
 
-    public static int colorMode; //0 = light, 1 = dark, 2 = system default
+    public static int colorMode; //0 = light, 1 = dark, (-1 = system default) when undefined, default to dark mode
+
+    public static MainActivity weirdStaticSelfReferenceForResultsFragmentToAccess;
+    //in some cases the color mode of the phone is changed during runtime, if the user rejoins the app not through the main fragment which would always reevaluate the color mode, but through the results fragment, the color mode would not be updated. this is a workaround to get the activity reference in the results fragment to call reevaluateColorMode() on it. this is not a good solution a horrible one actually //TODO
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -158,26 +161,39 @@ public class MainActivity extends AppCompatActivity implements FileCopyPermissio
         vpAdapter.addFragment(new ResultsFragment());*/
 
 
-        int nightModeFlags = getResources().getConfiguration().uiMode &
-                        Configuration.UI_MODE_NIGHT_MASK;
-        switch (nightModeFlags) {
-            case Configuration.UI_MODE_NIGHT_YES:
-                colorMode = 1;
-                break;
-
-            case Configuration.UI_MODE_NIGHT_NO:
-                colorMode = 0;
-                break;
-
-            case Configuration.UI_MODE_NIGHT_UNDEFINED:
-//                colorMode = -1;
-                colorMode=1;
-                break;
-        }
+        weirdStaticSelfReferenceForResultsFragmentToAccess = this;
+        this.reevaluateColorMode();
 
     }
 
+    public static MainActivity getInstance() {
+        return weirdStaticSelfReferenceForResultsFragmentToAccess;
+    }
 
+
+    // returned int is unnecessary, since id go down the route of forcing the user to access the color mode through the public static color mode variable
+public int reevaluateColorMode(){
+
+    int nightModeFlags = getResources().getConfiguration().uiMode &
+            Configuration.UI_MODE_NIGHT_MASK;
+    switch (nightModeFlags) {
+        case Configuration.UI_MODE_NIGHT_YES:
+            colorMode = 1;
+            break;
+
+        case Configuration.UI_MODE_NIGHT_NO:
+            colorMode = 0;
+            break;
+
+        case Configuration.UI_MODE_NIGHT_UNDEFINED:
+//                colorMode = -1;
+            colorMode=1;
+            break;
+    }
+
+    return colorMode;
+
+}
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

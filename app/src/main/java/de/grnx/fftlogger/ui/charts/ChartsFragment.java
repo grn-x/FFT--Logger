@@ -72,7 +72,16 @@ public class ChartsFragment extends Fragment {
         sharedViewModel = new ViewModelProvider(requireActivity()).get(ChartsViewModel.class);
 
         graphLabelColor = Color.WHITE;
-        if(MainActivity.colorMode == 0) graphLabelColor = Color.BLACK;
+        try{
+            if(MainActivity.getInstance().reevaluateColorMode() == 0) graphLabelColor = Color.BLACK;
+        }catch (Exception e){ // I can definitely see this failing because of androids lifecycle management
+            try{
+                if(MainActivity.colorMode == 0) graphLabelColor = Color.BLACK;
+            }catch (Exception e2){ // if the upper one fails, this should most definitely fail as well, but it worked before so idk
+                Log.d("DebugTag", "onCreateView: " + e2.getMessage());
+                e2.printStackTrace();
+            }
+        }
 
 
         chartVol = root.findViewById(R.id.chart1);

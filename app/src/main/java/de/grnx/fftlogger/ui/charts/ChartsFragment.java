@@ -65,6 +65,9 @@ public class ChartsFragment extends Fragment {
 
 
 //TODO when starting (and stopping) the logging without opening the graph once, the graph extends to the right on the x-axis without data
+    //TODO: recalculate if both points are set and the user changes the emitted frequency
+    //TODO: rather than relying on occupation of the emitted frequency field, use a toggle button to switch between autodetecting the turning point/original emitted frequency, and manually setting it
+    //TODO decide wether to automatically estimate the turning point by time (makes sense) or frequency (does not make sense, inaccurate and also false according to the formula)
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_charts, container, false);

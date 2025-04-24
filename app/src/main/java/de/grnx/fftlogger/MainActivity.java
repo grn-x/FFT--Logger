@@ -1,7 +1,5 @@
 package de.grnx.fftlogger;
 
-import static java.security.AccessController.getContext;
-
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -16,14 +14,13 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
-import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
-import androidx.fragment.app.FragmentPagerAdapter;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
@@ -41,16 +38,11 @@ import de.grnx.fftlogger.FileHandling.FileUtils;
 import de.grnx.fftlogger.databinding.ActivityMainBinding;
 import de.grnx.fftlogger.ui.charts.ChartsViewModel;
 import de.grnx.fftlogger.ui.charts.ChartsFragment;
-import de.grnx.fftlogger.ui.results.ResultsFragment;
-import de.grnx.fftlogger.ui.start.HomeFragment;
 import de.grnx.fftlogger.ui.start.HomeViewModel;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -244,13 +236,24 @@ public int reevaluateColorMode(){
 
         initialHighPassFilter = sharedViewModel.getHighPassFilter();
         initialLowPassFilter = sharedViewModel.getLowPassFilter();
-        passFilters.setHigh(initialHighPassFilter);
-        passFilters.setLow(initialLowPassFilter);
 
-        startTime = System.currentTimeMillis();
+        //if(initialHighPassFilter>initialLowPassFilter) initialHighPassFilter = initialHighPassFilter^initialLowPassFilter^(initialLowPassFilter = initialHighPassFilter);
+        // cant xor swap doubles; nobody wouldve wanted to evaluate this anyways
+
+        if(initialHighPassFilter > initialLowPassFilter) {
+            double temp = initialHighPassFilter;
+            initialHighPassFilter = initialLowPassFilter;
+            initialLowPassFilter = temp;
+            Toast.makeText(this, "The lower bound is higher than the maximum, swapping values", Toast.LENGTH_LONG).show();
+        }
+
+
+
+
         String str;
         if(initialHighPassFilter<=0 && initialLowPassFilter <= 0){
-            str = "Session started. The loudest frequency will appear here and in the graphs unfiltered";
+            str = "Session started. The loudest frequency will appear here and in the graphs unfiltered. Note that the microphone sampling rate of " + sampleRate + " Hz limits the maximum recordable frequency to " + (sampleRate/2) + " Hz.";
+            initialLowPassFilter = (double) sampleRate /2; // moved nyquist frequency limiting here; double cast should be unnecessary
         }else if(initialHighPassFilter<=0){
             str = "Session started. The loudest frequency up to " + initialLowPassFilter + " Hz will appear here and in the graphs";
         }else if(initialLowPassFilter <= 0){
@@ -261,7 +264,12 @@ public int reevaluateColorMode(){
             str = "Session started. Error (the filters are probably set correctly but I messed up the ui logic)";
         }
 
-        dismissableSnackbar(str, "Ok", 10000);
+        passFilters.setHigh(initialHighPassFilter);
+        passFilters.setLow(initialLowPassFilter);
+
+        dismissibleSnackbar(str, "Ok", 15000);
+
+        startTime = System.currentTimeMillis();
     }
 
     public void stopLogging() {
@@ -328,7 +336,7 @@ public int reevaluateColorMode(){
     public void saveLogSession(){
         saveLogPart();
         String name = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss").format(Calendar.getInstance().getTime()).concat(".txt");
-        currentLogFile.renameTo(new File(checkSubDir(), name));
+        currentLogFile.renameTo(new File(checkSubDir(), name)); //TODO check succession of renaming; alternatively choose a new name
 
     }
 
@@ -463,7 +471,7 @@ public int reevaluateColorMode(){
         }
         return super.dispatchTouchEvent( event );
     }
-public void dismissableSnackbar(String message, String actionMessage, int duration){
+public void dismissibleSnackbar(String message, String actionMessage, int duration){
     final Snackbar snackBar = Snackbar.make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG);
 
     snackBar.setAction(actionMessage, new View.OnClickListener() {

@@ -43,7 +43,7 @@ public class HomeViewModel extends ViewModel {
     }
 
     public double getLowPassFilter() {
-        return lowPassFilter != null && lowPassFilter.getValue() != null ? lowPassFilter.getValue() : MainActivity.sampleRate / 2; //nyquist frequency if not initialized
+        return lowPassFilter != null && lowPassFilter.getValue() != null ? lowPassFilter.getValue() : 0; //MainActivity.sampleRate / 2; //nyquist frequency if not initialized //!! leave nyquist frequency limiting to the caller
     }
     public void setLowPassFilter(double value) {
         lowPassFilter.setValue(value);

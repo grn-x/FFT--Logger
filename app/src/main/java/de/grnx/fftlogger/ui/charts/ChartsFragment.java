@@ -126,7 +126,8 @@ public class ChartsFragment extends Fragment {
                     }
                     sharedViewModel.setOrigFreq(Double.parseDouble(s.toString()));
                     if(tvFreqInput.hasFocus()) {
-                        sharedViewModel.setYEstimatedFreq(null);
+                        //sharedViewModel.setYEstimatedFreq(null); //todo breakpoint
+
                         chartFreq.getAxis(YAxis.AxisDependency.LEFT).removeAllLimitLines();
                         var ll = new LimitLine(sharedViewModel.getOrigFreq().getValue().floatValue(), "Emitted Frequency");
                         ll.setTextColor(graphLabelColor);
@@ -207,6 +208,7 @@ public class ChartsFragment extends Fragment {
 
         //TODO orig frequency persists after fragment restart; also estimated frequency label changes to frequency label
 
+        /* Deprecated in favor of origFreq
         if(sharedViewModel.getYEstimatedFreq().getValue()!=null){
             chartFreq.getAxis(YAxis.AxisDependency.LEFT).removeAllLimitLines();
             var limitLine = new LimitLine(sharedViewModel.getYEstimatedFreq().getValue().floatValue(), "Estimated Emitted Frequency");
@@ -214,6 +216,7 @@ public class ChartsFragment extends Fragment {
             chartFreq.getAxis(YAxis.AxisDependency.LEFT).addLimitLine(limitLine);
             xPointPassingAllowed = true;
         }
+         */
 
         if(sharedViewModel.getOrigFreq().getValue()!=null){
             tvFreqInput.setText(""+sharedViewModel.getOrigFreq().getValue());
@@ -224,8 +227,8 @@ public class ChartsFragment extends Fragment {
             xPointPassingAllowed = true;
         }else{
             tvFreqInput.setText("");
-
         }
+
         if(sharedViewModel.getXPointPassing().getValue()!=null&&xPointPassingAllowed){
             chartFreq.getXAxis().removeAllLimitLines();
             var horizontalLimitLine = new LimitLine(sharedViewModel.getXPointPassing().getValue().floatValue(), "Estimated Passing Point");
@@ -568,7 +571,7 @@ private void addEntry(LineChart chart, Entry entry) {
                 return;
             }*/
             if(sharedViewModel.getPoint1().getValue().getY()<sharedViewModel.getPoint2().getValue().getY()){
-                Toast.makeText(getContext(), "Point 1 must be of higher frequency than Point 2", Toast.LENGTH_LONG).show();//this cannot work as the observed audio source would first need to leave just to then approach
+                Toast.makeText(getContext(), "Impossible circumstance: Point 1 must be of higher frequency than Point 2; Calculation aborted", Toast.LENGTH_LONG).show();//this cannot work as the observed audio source would first need to leave just to then approach
                 return;
             }
 
@@ -578,7 +581,7 @@ private void addEntry(LineChart chart, Entry entry) {
 
 
             //if(!tvFreqInput.getText().toString().isEmpty() ){
-            if((sharedViewModel.getOrigFreq().getValue()!=null)&&(sharedViewModel.getOrigFreq().getValue()>0d)){
+            if(((sharedViewModel.getOrigFreq().getValue()!=null)&&(sharedViewModel.getDetectionMode().getValue()==false))&&(sharedViewModel.getOrigFreq().getValue()>0d)){
                 //double val = Double.parseDouble(tvFreqInput.getText().toString());
 
                 if(Double.parseDouble(tvPoint1Freq.getText().toString())>Double.parseDouble(tvFreqInput.getText().toString()) && Double.parseDouble(tvFreqInput.getText().toString())>Double.parseDouble(tvPoint2Freq.getText().toString())){ // p1 greater than freq greater than p2 //perfect case
@@ -644,7 +647,6 @@ private void addEntry(LineChart chart, Entry entry) {
                     sharedViewModel.setXPointPassing((double) closestEntry.getX());
 
 
-
                 }else{ //case where one frequency is greater or lower than the emitted frequency, but there is no second one, so the vehicle was recorded leaving or approaching but not both
                     //for this to happen something must be wrong with the input, it is highly unlikely, but if the user still manages to correctly place the (there can only be one anymore) point, calculations might still succeed
                     Toast.makeText(getContext(), "Your range doesn't contain a turning point, calculations may be off", Toast.LENGTH_SHORT).show();
@@ -670,7 +672,7 @@ private void addEntry(LineChart chart, Entry entry) {
                 }
                 return;
             }else{
-                //Emitted Frequency is empty, find turning point? //TODO
+                //Emitted Frequency is empty, OR automatic detection is enabled; find turning point //TODO
 
                     // create map of all values between p1 and p2
                     // filter out the single entry where the value is closest to the input frequency
@@ -727,8 +729,11 @@ private void addEntry(LineChart chart, Entry entry) {
 
 
 
-                sharedViewModel.setOrigFreq(null);
-                sharedViewModel.setYEstimatedFreq((double) closestEntry.getY());
+                //sharedViewModel.setOrigFreq(null);
+                //sharedViewModel.setYEstimatedFreq((double) closestEntry.getY());
+                //deprecated; manage everything via origFreq and toggle button
+
+                sharedViewModel.setOrigFreq((double) closestEntry.getY());
                 sharedViewModel.setXPointPassing((double) closestEntry.getX());
                 tvFreqInput.setText(""+closestEntry.getY());
 

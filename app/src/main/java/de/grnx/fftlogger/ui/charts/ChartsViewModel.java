@@ -74,7 +74,7 @@ public class ChartsViewModel extends ViewModel {
         vApproach.setValue(null);
         vLeave.setValue(null);
         xPointPassing.setValue(null);
-        yEstimatedFreq.setValue(null);
+        //yEstimatedFreq.setValue(null);
 
     }
 
@@ -105,6 +105,7 @@ public class ChartsViewModel extends ViewModel {
         return xPointPassing;
     }
 
+    @Deprecated //manage everything with origFreq, because of new manual mode
     public LiveData<Double> getYEstimatedFreq() {
         return yEstimatedFreq;
     }
@@ -121,6 +122,7 @@ public class ChartsViewModel extends ViewModel {
         xPointPassing.setValue(value);
     }
 
+    @Deprecated //manage everything with origFreq, because of new manual mode
     public void setYEstimatedFreq(Double value) {
         yEstimatedFreq.setValue(value);
     }

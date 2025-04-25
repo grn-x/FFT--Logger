@@ -17,6 +17,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.widget.AppCompatToggleButton;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -59,6 +60,8 @@ public class ChartsFragment extends Fragment {
 
     private TextView tvVApproach;
     private TextView tvVLeave;
+
+    private AppCompatToggleButton tbDMode;
 
     public static int graphLabelColor;
 
@@ -103,6 +106,7 @@ public class ChartsFragment extends Fragment {
 
         tvVApproach = root.findViewById(R.id.label5);
         tvVLeave = root.findViewById(R.id.label6);
+        tbDMode = root.findViewById(R.id.detection_mode);
 
         choosingP1 = choosingP2 = false;
 
@@ -128,6 +132,8 @@ public class ChartsFragment extends Fragment {
                         ll.setTextColor(graphLabelColor);
                         chartFreq.getAxis(YAxis.AxisDependency.LEFT).addLimitLine(ll);
                         chartFreq.invalidate();
+
+                        // recalculate the velocity TODO
                     }
                 } catch (Exception e) {
 
@@ -240,6 +246,29 @@ public class ChartsFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 buttonHandler(v, point2);
+            }
+        });
+
+        // export if block to method, automatically executing on create view, and callable in below button handler
+        if(sharedViewModel.getDetectionMode().getValue() != null) {
+            if (sharedViewModel.getDetectionMode().getValue()) {
+                tvFreqInput.setEnabled(false);
+            } else {
+                tvFreqInput.setEnabled(true);
+            }
+        }
+        tbDMode.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(tbDMode.isChecked()){
+                    tbDMode.setText("Automatic Detection");
+                    sharedViewModel.setDetectionMode(true);
+                    tvFreqInput.setEnabled(false);
+                }else{
+                    tbDMode.setText("Manual Detection");
+                    sharedViewModel.setDetectionMode(false);
+                    tvFreqInput.setEnabled(true);
+                }
             }
         });
 

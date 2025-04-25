@@ -91,6 +91,7 @@ public class ChartsViewModel extends ViewModel {
 
     private MutableLiveData<Double> yEstimatedFreq = new MutableLiveData<>(); //should be float //if this is null. and origFreq isnt null, then the user entered the frequency manually -> use origFreq
 
+    private MutableLiveData<Boolean> detectionMode = new MutableLiveData<>(true); //true = auto, false = manual
 
     public LiveData<Double> getVApproach() {
         return vApproach;
@@ -149,5 +150,15 @@ public class ChartsViewModel extends ViewModel {
     public LiveData<Double> getOrigFreq() {
         return origFreq;
     }
+
+
+    public LiveData<Boolean> getDetectionMode() {
+        return detectionMode;
+    }
+
+    public void setDetectionMode(Boolean value) {
+        detectionMode.setValue(value);
+    }
+
 
 }
